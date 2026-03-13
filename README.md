@@ -1,4 +1,61 @@
-# QuTiP
+import numpy as np
+import matplotlib.pyplot as plt
+from qutip import *
+
+# =====================================================================
+# Exemplo: Estado GHZ de 3 qubits com decaimento coletivo
+# Mostra violação de entrelaçamento sob dissipação
+# =====================================================================
+
+# Parâmetros
+N = 3                        # número de qubits
+gamma = 2 * np.pi * 0.5      # taxa de decaimento individual (T1 ≈ 2 μs)
+tlist = np.linspace(0.0, 1.0, 400)  # tempo em μs
+
+# Operadores básicos
+sz = sigmaz()
+sm = sigmam()
+id2 = qeye(2)
+
+# Hamiltoniano: só identidade (sem drive, foco na dissipação)
+H = tensor([qzero(2)] * N)   # Hamiltoniano nulo → evolução puramente dissipativa
+
+# Colapso operators: decaimento individual em cada qubit
+c_ops = []
+for i in range(N):
+    op_list = [id2] * N
+    op_list[i] = sm
+    c_ops.append(np.sqrt(gamma) * tensor(op_list))
+
+# Estado inicial: GHZ = (|000> + |111>)/√2
+ghz = (tensor(basis(2,0), basis(2,0), basis(2,0)) + 
+       tensor(basis(2,1), basis(2,1), basis(2,1))).unit()
+
+# Evolução com mesolve
+result = mesolve(H, ghz, tlist, c_ops, [])
+
+# Função para calcular fidelidade com GHZ ideal
+def fidelity_ghz(rho):
+    ghz_dm = ghz * ghz.dag()
+    return fidelity(rho, ghz_dm)
+
+# Calcula fidelidade ao longo do tempo
+fids = [fidelity_ghz(result.states[i]) for i in range(len(tlist))]
+
+# Plot da fidelidade
+plt.figure(figsize=(10, 6))
+plt.plot(tlist, fids, color='C0', lw=2.5, label='Fidelidade com GHZ ideal')
+plt.axhline(1/np.sqrt(2**N), color='gray', ls='--', label='Limite clássico (1/√8 ≈ 0.354)')
+plt.xlabel('Tempo (μs)')
+plt.ylabel('Fidelidade')
+plt.title(f'Decaimento do estado GHZ de {N} qubits (decaimento individual γ = {gamma/(2*np.pi):.1f} MHz)')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.ylim(0, 1.05)
+plt.show()
+
+# No final: fidelidade ≈ ?
+print(f"Fidelidade final (t = {tlist[-1]:.2f} μs): {fids[-1]:.4f}")# QuTiP
 import numpy as np
 import matplotlib.pyplot as plt
 from qutip import *
